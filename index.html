@@ -16,9 +16,11 @@
       padding: 0;
       margin-bottom: 0.2em;
       font-size: 1.3em;
+      font-family: monospace; /* Use monospace for aligned spacing */
     }
     #flows li {
       margin: 0.2em 0;
+      white-space: pre; /* preserve spaces */
     }
     hr {
       border: none;
@@ -29,13 +31,12 @@
       font-weight: bold;
       font-size: 1.5em;
     }
-    /* Add some blank space above AF Inflow */
     #spacer {
       height: 2em;
     }
     canvas {
       width: 100% !important;
-      height: 320px !important; /* taller chart */
+      height: 320px !important;
     }
   </style>
 </head>
@@ -43,9 +44,9 @@
   <h1>USGS Flow Data</h1>
   <ul id="flows"></ul>
   <hr>
-  
+
   <div id="spacer"></div>
-  
+
   <h2>AF Inflow: <span id="total">0</span> cfs</h2>
 
   <canvas id="flowChart"></canvas>
@@ -73,6 +74,11 @@
 
     function formatFlow(value) {
       return Math.round(value).toLocaleString();
+    }
+
+    // Find max length of site names to align numbers
+    function padRight(str, length) {
+      return str + " ".repeat(Math.max(length - str.length, 0));
     }
 
     const now = new Date();
@@ -117,10 +123,14 @@
         return;
       }
 
+      // Calculate max site name length for padding
+      const maxNameLen = sitesData.reduce((max, site) => Math.max(max, site.siteName.length), 0);
+
       flowsEl.innerHTML = '';
       let totalLatest = 0;
       sitesData.forEach(site => {
-        flowsEl.innerHTML += `<li>${site.siteName}: ${formatFlow(site.latestFlow)} cfs</li>`;
+        const paddedName = padRight(site.siteName, maxNameLen);
+        flowsEl.innerHTML += `<li>${paddedName}  ${formatFlow(site.latestFlow)} cfs</li>`;
         totalLatest += site.latestFlow;
       });
 
