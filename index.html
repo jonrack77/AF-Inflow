@@ -16,21 +16,45 @@
       padding: 0;
       margin-bottom: 0.2em;
       font-size: 1.3em;
-      font-family: Arial, sans-serif; /* Restore original font */
-      font-weight: bold;             /* Make bold like before */
-      white-space: pre;              /* preserve spaces for alignment */
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      /* Use CSS grid for alignment */
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      column-gap: 0.5em;
+      align-items: center;
     }
     #flows li {
       margin: 0.2em 0;
+      display: contents; /* Allow grid children to align */
+    }
+    #flows li span {
+      /* Each part in separate spans for alignment */
+      overflow-wrap: normal;
+    }
+    .site-name {
+      justify-self: start;
+    }
+    .flow-value {
+      justify-self: end;
+      min-width: 60px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .unit {
+      justify-self: start;
+      padding-left: 0.2em;
     }
     hr {
       border: none;
       border-top: 1px solid #333;
       margin: 0.4em 0;
+      grid-column: 1 / 4; /* span all columns */
     }
     h2 {
       font-weight: bold;
       font-size: 1.5em;
+      margin-top: 0.5em;
     }
     #spacer {
       height: 2em;
@@ -77,10 +101,6 @@
       return Math.round(value).toLocaleString();
     }
 
-    function padRight(str, length) {
-      return str + " ".repeat(Math.max(length - str.length, 0));
-    }
-
     const now = new Date();
     const endDT = now.toISOString();
     const startDT = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -123,13 +143,10 @@
         return;
       }
 
-      const maxNameLen = sitesData.reduce((max, site) => Math.max(max, site.siteName.length), 0);
-
       flowsEl.innerHTML = '';
       let totalLatest = 0;
       sitesData.forEach(site => {
-        const paddedName = padRight(site.siteName, maxNameLen);
-        flowsEl.innerHTML += `<li>${paddedName}  ${formatFlow(site.latestFlow)} cfs</li>`;
+        flowsEl.innerHTML += `<li><span class="site-name">${site.siteName}</span><span class="flow-value">${formatFlow(site.latestFlow)}</span><span class="unit">cfs</span></li>`;
         totalLatest += site.latestFlow;
       });
 
