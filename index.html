@@ -39,11 +39,11 @@
 
   <script>
     const siteIDs = [
-      '12389000', // Clark Fork near Plains, MT
-      '12389500', // Thompson River near Thompson Falls, MT
-      '12390700', // Prospect Creek at Thompson Falls, MT
-      '12392155', // Lightning Creek at Clark Fork, ID
-      '12395000'  // Priest River near Priest River, ID
+      '12389000', // Clark Fork @ Plains
+      '12389500', // Thompson River
+      '12390700', // Prospect Creek
+      '12392155', // Lightning Creek
+      '12395000'  // Priest River
     ];
 
     const flowsEl = document.getElementById('flows');
@@ -115,7 +115,7 @@
             data: totalFlows,
             borderColor: 'rgb(54, 162, 235)',
             backgroundColor: 'rgba(54, 162, 235, 0.2)',
-            fill: true,
+            fill: false,
             tension: 0.3,
             pointRadius: 0
           }]
