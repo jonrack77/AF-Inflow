@@ -18,7 +18,6 @@
       font-size: 1.3em;
       font-family: Arial, sans-serif;
       font-weight: bold;
-      /* Use CSS grid for alignment */
       display: grid;
       grid-template-columns: 1fr auto auto;
       column-gap: 0.5em;
@@ -26,10 +25,9 @@
     }
     #flows li {
       margin: 0.2em 0;
-      display: contents; /* Allow grid children to align */
+      display: contents;
     }
     #flows li span {
-      /* Each part in separate spans for alignment */
       overflow-wrap: normal;
     }
     .site-name {
@@ -49,7 +47,7 @@
       border: none;
       border-top: 1px solid #333;
       margin: 0.4em 0;
-      grid-column: 1 / 4; /* span all columns */
+      grid-column: 1 / 4;
     }
     h2 {
       font-weight: bold;
@@ -116,9 +114,11 @@
           if (!values || values.length === 0) return null;
 
           let latestFlow = null;
+          let latestIndex = null;
           for (let i = values.length - 1; i >= 0; i--) {
             if (values[i].value !== null && values[i].value !== undefined && values[i].value !== '') {
               latestFlow = parseFloat(values[i].value);
+              latestIndex = i;
               break;
             }
           }
@@ -132,7 +132,7 @@
 
           const siteName = siteNames[id] || rawName;
 
-          return { siteName, latestFlow, times, flows };
+          return { siteName, latestFlow, latestIndex, times, flows };
         })
         .catch(() => null)
     )).then(sitesDataRaw => {
@@ -143,6 +143,7 @@
         return;
       }
 
+      // Show individual flows
       flowsEl.innerHTML = '';
       let totalLatest = 0;
       sitesData.forEach(site => {
@@ -156,10 +157,17 @@
       }
       totalEl.textContent = formatFlow(totalLatest);
 
-      const labels = sitesData[0].times.map(t => t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      const totalFlows = [];
+      // Find common latest index that all sites have data for, closest to their latestIndex
+      // To align data points properly for chart's last point matching total
+      const minLatestIndex = Math.min(...sitesData.map(site => site.latestIndex));
 
-      for (let i = 0; i < labels.length; i++) {
+      // Use times from first site, but truncate to minLatestIndex+1 for uniform length
+      const labels = sitesData[0].times.slice(0, minLatestIndex + 1).map(t =>
+        t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      );
+
+      const totalFlows = [];
+      for (let i = 0; i <= minLatestIndex; i++) {
         let sum = 0;
         sitesData.forEach(site => {
           sum += site.flows[i] || 0;
