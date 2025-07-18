@@ -15,7 +15,7 @@
       list-style: none;
       padding: 0;
       margin-bottom: 0.2em;
-      font-size: 1.3em; /* Increased font size for mobile */
+      font-size: 1.3em;
     }
     #flows li {
       margin: 0.2em 0;
@@ -27,11 +27,15 @@
     }
     h2 {
       font-weight: bold;
-      font-size: 1.5em; /* Larger font size */
+      font-size: 1.5em;
+    }
+    /* Add some blank space above AF Inflow */
+    #spacer {
+      height: 2em;
     }
     canvas {
       width: 100% !important;
-      height: 250px !important;
+      height: 320px !important; /* taller chart */
     }
   </style>
 </head>
@@ -39,6 +43,9 @@
   <h1>USGS Flow Data</h1>
   <ul id="flows"></ul>
   <hr>
+  
+  <div id="spacer"></div>
+  
   <h2>AF Inflow: <span id="total">0</span> cfs</h2>
 
   <canvas id="flowChart"></canvas>
@@ -172,4 +179,3 @@
   </script>
 </body>
 </html>
-
