@@ -99,6 +99,14 @@
       return Math.round(value).toLocaleString();
     }
 
+    function roundUpToNearest100(num) {
+      return Math.ceil(num / 100) * 100;
+    }
+
+    function roundDownToNearest100(num) {
+      return Math.floor(num / 100) * 100;
+    }
+
     const now = new Date();
     const endDT = now.toISOString();
     const startDT = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -143,7 +151,6 @@
         return;
       }
 
-      // Show individual flows
       flowsEl.innerHTML = '';
       let totalLatest = 0;
       sitesData.forEach(site => {
@@ -157,11 +164,8 @@
       }
       totalEl.textContent = formatFlow(totalLatest);
 
-      // Find common latest index that all sites have data for, closest to their latestIndex
-      // To align data points properly for chart's last point matching total
       const minLatestIndex = Math.min(...sitesData.map(site => site.latestIndex));
 
-      // Use times from first site, but truncate to minLatestIndex+1 for uniform length
       const labels = sitesData[0].times.slice(0, minLatestIndex + 1).map(t =>
         t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       );
@@ -197,8 +201,8 @@
           scales: {
             y: {
               beginAtZero: false,
-              min: Math.max(0, minFlow - 1000),
-              max: maxFlow + 1000,
+              min: Math.max(0, roundDownToNearest100(minFlow - 100)),
+              max: roundUpToNearest100(maxFlow + 100),
               title: { display: true, text: 'Flow (cfs)' }
             },
             x: {
