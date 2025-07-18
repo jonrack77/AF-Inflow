@@ -15,7 +15,7 @@
       list-style: none;
       padding: 0;
       margin-bottom: 0.2em;
-      font-size: 1.1em;
+      font-size: 1.3em; /* Increased font size for mobile */
     }
     #flows li {
       margin: 0.2em 0;
@@ -27,7 +27,7 @@
     }
     h2 {
       font-weight: bold;
-      font-size: 1.3em;
+      font-size: 1.5em; /* Larger font size */
     }
     canvas {
       width: 100% !important;
@@ -52,7 +52,6 @@
       '12395000'
     ];
 
-    // Map site IDs to custom names
     const siteNames = {
       '12389000': 'Clark Fork @ Plains',
       '12389500': 'Thompson River',
@@ -83,7 +82,6 @@
           const values = ts[0].values[0].value;
           if (!values || values.length === 0) return null;
 
-          // Latest flow (last valid reading)
           let latestFlow = null;
           for (let i = values.length - 1; i >= 0; i--) {
             if (values[i].value !== null && values[i].value !== undefined && values[i].value !== '') {
@@ -99,7 +97,6 @@
             return isNaN(val) ? 0 : val;
           });
 
-          // Use custom name if exists, else raw name
           const siteName = siteNames[id] || rawName;
 
           return { siteName, latestFlow, times, flows };
@@ -175,3 +172,4 @@
   </script>
 </body>
 </html>
+
