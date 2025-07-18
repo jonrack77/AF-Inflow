@@ -2,12 +2,14 @@
 <html>
 <head>
   <title>USGS Flow and AF Inflow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       max-width: 700px;
       margin: auto;
+      padding: 0 10px;
     }
     #flows {
       list-style: none;
@@ -27,6 +29,10 @@
       font-weight: bold;
       font-size: 1.3em;
     }
+    canvas {
+      width: 100% !important;
+      height: 250px !important;
+    }
   </style>
 </head>
 <body>
@@ -35,66 +41,92 @@
   <hr>
   <h2>AF Inflow: <span id="total">0</span> cfs</h2>
 
-  <canvas id="flowChart" width="600" height="300"></canvas>
+  <canvas id="flowChart"></canvas>
 
   <script>
     const siteIDs = [
-      '12389000', // Clark Fork @ Plains
-      '12389500', // Thompson River
-      '12390700', // Prospect Creek
-      '12392155', // Lightning Creek
-      '12395000'  // Priest River
+      '12389000',
+      '12389500',
+      '12390700',
+      '12392155',
+      '12395000'
     ];
+
+    // Map site IDs to custom names
+    const siteNames = {
+      '12389000': 'Clark Fork @ Plains',
+      '12389500': 'Thompson River',
+      '12390700': 'Prospect Creek',
+      '12392155': 'Lightning Creek',
+      '12395000': 'Priest River'
+    };
 
     const flowsEl = document.getElementById('flows');
     const totalEl = document.getElementById('total');
     const ctx = document.getElementById('flowChart').getContext('2d');
 
-    // For formatting numbers with commas and no decimals
     function formatFlow(value) {
       return Math.round(value).toLocaleString();
     }
 
-    // Time range for last 24 hours
     const now = new Date();
     const endDT = now.toISOString();
-    const startDT = new Date(now.getTime() - 24*60*60*1000).toISOString();
+    const startDT = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
 
-    // Fetch latest individual flows + 24h data for total chart
     Promise.all(siteIDs.map(id =>
       fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${id}&parameterCd=00060&startDT=${startDT}&endDT=${endDT}`)
         .then(res => res.json())
         .then(data => {
-          const siteName = data.value.timeSeries[0].sourceInfo.siteName;
-          const values = data.value.timeSeries[0].values[0].value;
+          const ts = data.value.timeSeries;
+          if (!ts || ts.length === 0) return null;
+          const rawName = ts[0].sourceInfo.siteName;
+          const values = ts[0].values[0].value;
+          if (!values || values.length === 0) return null;
 
-          // Latest flow (last reading)
-          const latestFlow = parseFloat(values[values.length - 1].value);
+          // Latest flow (last valid reading)
+          let latestFlow = null;
+          for (let i = values.length - 1; i >= 0; i--) {
+            if (values[i].value !== null && values[i].value !== undefined && values[i].value !== '') {
+              latestFlow = parseFloat(values[i].value);
+              break;
+            }
+          }
+          if (latestFlow === null) return null;
 
-          // For chart, return site name & full 24h flow array
           const times = values.map(v => new Date(v.dateTime));
-          const flows = values.map(v => parseFloat(v.value));
+          const flows = values.map(v => {
+            let val = parseFloat(v.value);
+            return isNaN(val) ? 0 : val;
+          });
+
+          // Use custom name if exists, else raw name
+          const siteName = siteNames[id] || rawName;
 
           return { siteName, latestFlow, times, flows };
         })
-    )).then(sitesData => {
-      // Show individual latest flows
+        .catch(() => null)
+    )).then(sitesDataRaw => {
+      const sitesData = sitesDataRaw.filter(d => d !== null);
+      if (sitesData.length === 0) {
+        flowsEl.innerHTML = '<li>No valid data available.</li>';
+        totalEl.textContent = '0';
+        return;
+      }
+
       flowsEl.innerHTML = '';
       let totalLatest = 0;
-      sitesData.forEach((site, i) => {
+      sitesData.forEach(site => {
         flowsEl.innerHTML += `<li>${site.siteName}: ${formatFlow(site.latestFlow)} cfs</li>`;
         totalLatest += site.latestFlow;
       });
 
-      // Insert horizontal line above total
-      const hr = document.createElement('hr');
-      flowsEl.parentNode.insertBefore(hr, totalEl.parentNode);
-
+      if (!flowsEl.nextElementSibling || flowsEl.nextElementSibling.tagName !== 'HR') {
+        const hr = document.createElement('hr');
+        flowsEl.parentNode.insertBefore(hr, totalEl.parentNode);
+      }
       totalEl.textContent = formatFlow(totalLatest);
 
-      // Prepare total flow (AF Inflow) over time by summing all sites at each timestamp
-      // Assuming timestamps align, use first site's times as labels
-      const labels = sitesData[0].times.map(t => t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+      const labels = sitesData[0].times.map(t => t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       const totalFlows = [];
 
       for (let i = 0; i < labels.length; i++) {
@@ -105,7 +137,9 @@
         totalFlows.push(Math.round(sum));
       }
 
-      // Create line chart with total only
+      const minFlow = Math.min(...totalFlows);
+      const maxFlow = Math.max(...totalFlows);
+
       new Chart(ctx, {
         type: 'line',
         data: {
@@ -114,7 +148,7 @@
             label: 'AF Inflow (cfs)',
             data: totalFlows,
             borderColor: 'rgb(54, 162, 235)',
-            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            backgroundColor: 'transparent',
             fill: false,
             tension: 0.3,
             pointRadius: 0
@@ -123,8 +157,15 @@
         options: {
           responsive: true,
           scales: {
-            y: { beginAtZero: true, title: { display: true, text: 'Flow (cfs)' } },
-            x: { title: { display: true, text: 'Time (last 24h)' } }
+            y: {
+              beginAtZero: false,
+              min: Math.max(0, minFlow - 1000),
+              max: maxFlow + 1000,
+              title: { display: true, text: 'Flow (cfs)' }
+            },
+            x: {
+              title: { display: true, text: 'Time (last 24h)' }
+            }
           },
           interaction: { mode: 'nearest', axis: 'x', intersect: false },
           plugins: { legend: { display: true } }
