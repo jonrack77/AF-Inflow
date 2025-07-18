@@ -9,7 +9,14 @@
   <h2>Total: <span id="total">0</span> cfs</h2>
 
   <script>
-    const siteIDs = ['01646500', '01651000']; // replace with your site numbers
+    const siteIDs = [
+      '12389000', // Clark Fork near Plains, MT
+      '12389500', // Thompson River near Thompson Falls, MT
+      '12390700', // Prospect Creek at Thompson Falls, MT
+      '12392155', // Lightning Creek at Clark Fork, ID
+      '12395000'  // Priest River near Priest River, ID
+    ];
+
     const flowsEl = document.getElementById('flows');
     const totalEl = document.getElementById('total');
     let total = 0;
