@@ -1,12 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>USGS Flow Last 24h</title>
+  <title>USGS Flow and AF Inflow</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: auto;
+    }
+    #flows {
+      list-style: none;
+      padding: 0;
+      margin-bottom: 0.2em;
+      font-size: 1.1em;
+    }
+    #flows li {
+      margin: 0.2em 0;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #333;
+      margin: 0.4em 0;
+    }
+    h2 {
+      font-weight: bold;
+      font-size: 1.3em;
+    }
+  </style>
 </head>
 <body>
-  <h1>USGS Flow Last 24 Hours</h1>
-  <canvas id="flowChart" width="800" height="400"></canvas>
+  <h1>USGS Flow Data</h1>
+  <ul id="flows"></ul>
+  <hr>
+  <h2>AF Inflow: <span id="total">0</span> cfs</h2>
+
+  <canvas id="flowChart" width="600" height="300"></canvas>
 
   <script>
     const siteIDs = [
@@ -17,14 +46,21 @@
       '12395000'  // Priest River near Priest River, ID
     ];
 
+    const flowsEl = document.getElementById('flows');
+    const totalEl = document.getElementById('total');
     const ctx = document.getElementById('flowChart').getContext('2d');
 
-    // Build time range for last 24 hours in ISO format
+    // For formatting numbers with commas and no decimals
+    function formatFlow(value) {
+      return Math.round(value).toLocaleString();
+    }
+
+    // Time range for last 24 hours
     const now = new Date();
     const endDT = now.toISOString();
     const startDT = new Date(now.getTime() - 24*60*60*1000).toISOString();
 
-    // Fetch flow data for each site for last 24 hours
+    // Fetch latest individual flows + 24h data for total chart
     Promise.all(siteIDs.map(id =>
       fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${id}&parameterCd=00060&startDT=${startDT}&endDT=${endDT}`)
         .then(res => res.json())
@@ -32,46 +68,69 @@
           const siteName = data.value.timeSeries[0].sourceInfo.siteName;
           const values = data.value.timeSeries[0].values[0].value;
 
-          // Extract timestamps and flow values
+          // Latest flow (last reading)
+          const latestFlow = parseFloat(values[values.length - 1].value);
+
+          // For chart, return site name & full 24h flow array
           const times = values.map(v => new Date(v.dateTime));
           const flows = values.map(v => parseFloat(v.value));
 
-          return { siteName, times, flows };
+          return { siteName, latestFlow, times, flows };
         })
     )).then(sitesData => {
-      // Use timestamps from the first site as labels (assume all same)
+      // Show individual latest flows
+      flowsEl.innerHTML = '';
+      let totalLatest = 0;
+      sitesData.forEach((site, i) => {
+        flowsEl.innerHTML += `<li>${site.siteName}: ${formatFlow(site.latestFlow)} cfs</li>`;
+        totalLatest += site.latestFlow;
+      });
+
+      // Insert horizontal line above total
+      const hr = document.createElement('hr');
+      flowsEl.parentNode.insertBefore(hr, totalEl.parentNode);
+
+      totalEl.textContent = formatFlow(totalLatest);
+
+      // Prepare total flow (AF Inflow) over time by summing all sites at each timestamp
+      // Assuming timestamps align, use first site's times as labels
       const labels = sitesData[0].times.map(t => t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+      const totalFlows = [];
 
-      // Create datasets for each site
-      const datasets = sitesData.map(site => ({
-        label: site.siteName,
-        data: site.flows,
-        fill: false,
-        borderColor: getRandomColor(),
-        tension: 0.3
-      }));
+      for (let i = 0; i < labels.length; i++) {
+        let sum = 0;
+        sitesData.forEach(site => {
+          sum += site.flows[i] || 0;
+        });
+        totalFlows.push(Math.round(sum));
+      }
 
+      // Create line chart with total only
       new Chart(ctx, {
         type: 'line',
-        data: { labels, datasets },
+        data: {
+          labels,
+          datasets: [{
+            label: 'AF Inflow (cfs)',
+            data: totalFlows,
+            borderColor: 'rgb(54, 162, 235)',
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0
+          }]
+        },
         options: {
           responsive: true,
-          interaction: { mode: 'nearest', axis: 'x', intersect: false },
           scales: {
             y: { beginAtZero: true, title: { display: true, text: 'Flow (cfs)' } },
             x: { title: { display: true, text: 'Time (last 24h)' } }
-          }
+          },
+          interaction: { mode: 'nearest', axis: 'x', intersect: false },
+          plugins: { legend: { display: true } }
         }
       });
     });
-
-    // Random pastel colors for lines
-    function getRandomColor() {
-      const r = Math.floor(150 + Math.random() * 100);
-      const g = Math.floor(150 + Math.random() * 100);
-      const b = Math.floor(150 + Math.random() * 100);
-      return `rgb(${r},${g},${b})`;
-    }
   </script>
 </body>
 </html>
