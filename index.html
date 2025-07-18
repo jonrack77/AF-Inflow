@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>USGS Flow Total</title>
+  <title>USGS Flow Last 24h</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>Flow Totals</h1>
-  <ul id="flows"></ul>
-  <h2>Total: <span id="total">0</span> cfs</h2>
+  <h1>USGS Flow Last 24 Hours</h1>
+  <canvas id="flowChart" width="800" height="400"></canvas>
 
   <script>
     const siteIDs = [
@@ -17,22 +17,61 @@
       '12395000'  // Priest River near Priest River, ID
     ];
 
-    const flowsEl = document.getElementById('flows');
-    const totalEl = document.getElementById('total');
-    let total = 0;
+    const ctx = document.getElementById('flowChart').getContext('2d');
 
+    // Build time range for last 24 hours in ISO format
+    const now = new Date();
+    const endDT = now.toISOString();
+    const startDT = new Date(now.getTime() - 24*60*60*1000).toISOString();
+
+    // Fetch flow data for each site for last 24 hours
     Promise.all(siteIDs.map(id =>
-      fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${id}&parameterCd=00060`)
+      fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${id}&parameterCd=00060&startDT=${startDT}&endDT=${endDT}`)
         .then(res => res.json())
         .then(data => {
           const siteName = data.value.timeSeries[0].sourceInfo.siteName;
-          const value = parseFloat(data.value.timeSeries[0].values[0].value[0].value);
-          total += value;
-          flowsEl.innerHTML += `<li>${siteName}: ${value} cfs</li>`;
+          const values = data.value.timeSeries[0].values[0].value;
+
+          // Extract timestamps and flow values
+          const times = values.map(v => new Date(v.dateTime));
+          const flows = values.map(v => parseFloat(v.value));
+
+          return { siteName, times, flows };
         })
-    )).then(() => {
-      totalEl.textContent = total.toFixed(2);
+    )).then(sitesData => {
+      // Use timestamps from the first site as labels (assume all same)
+      const labels = sitesData[0].times.map(t => t.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+
+      // Create datasets for each site
+      const datasets = sitesData.map(site => ({
+        label: site.siteName,
+        data: site.flows,
+        fill: false,
+        borderColor: getRandomColor(),
+        tension: 0.3
+      }));
+
+      new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'nearest', axis: 'x', intersect: false },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Flow (cfs)' } },
+            x: { title: { display: true, text: 'Time (last 24h)' } }
+          }
+        }
+      });
     });
+
+    // Random pastel colors for lines
+    function getRandomColor() {
+      const r = Math.floor(150 + Math.random() * 100);
+      const g = Math.floor(150 + Math.random() * 100);
+      const b = Math.floor(150 + Math.random() * 100);
+      return `rgb(${r},${g},${b})`;
+    }
   </script>
 </body>
 </html>
