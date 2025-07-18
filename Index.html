@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>USGS Flow Total</title>
+</head>
+<body>
+  <h1>Flow Totals</h1>
+  <ul id="flows"></ul>
+  <h2>Total: <span id="total">0</span> cfs</h2>
+
+  <script>
+    const siteIDs = ['01646500', '01651000']; // replace with your site numbers
+    const flowsEl = document.getElementById('flows');
+    const totalEl = document.getElementById('total');
+    let total = 0;
+
+    Promise.all(siteIDs.map(id =>
+      fetch(`https://waterservices.usgs.gov/nwis/iv/?format=json&sites=${id}&parameterCd=00060`)
+        .then(res => res.json())
+        .then(data => {
+          const siteName = data.value.timeSeries[0].sourceInfo.siteName;
+          const value = parseFloat(data.value.timeSeries[0].values[0].value[0].value);
+          total += value;
+          flowsEl.innerHTML += `<li>${siteName}: ${value} cfs</li>`;
+        })
+    )).then(() => {
+      totalEl.textContent = total.toFixed(2);
+    });
+  </script>
+</body>
+</html>
