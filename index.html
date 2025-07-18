@@ -16,11 +16,12 @@
       padding: 0;
       margin-bottom: 0.2em;
       font-size: 1.3em;
-      font-family: monospace; /* Use monospace for aligned spacing */
+      font-family: Arial, sans-serif; /* Restore original font */
+      font-weight: bold;             /* Make bold like before */
+      white-space: pre;              /* preserve spaces for alignment */
     }
     #flows li {
       margin: 0.2em 0;
-      white-space: pre; /* preserve spaces */
     }
     hr {
       border: none;
@@ -76,7 +77,6 @@
       return Math.round(value).toLocaleString();
     }
 
-    // Find max length of site names to align numbers
     function padRight(str, length) {
       return str + " ".repeat(Math.max(length - str.length, 0));
     }
@@ -123,7 +123,6 @@
         return;
       }
 
-      // Calculate max site name length for padding
       const maxNameLen = sitesData.reduce((max, site) => Math.max(max, site.siteName.length), 0);
 
       flowsEl.innerHTML = '';
